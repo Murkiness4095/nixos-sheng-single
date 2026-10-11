@@ -51,11 +51,22 @@
 
       # Diagnostic flavor: tty base plus the USB serial gadget console
       # (console=ttyGS0 alongside tty0). Kernel messages reach the USB port
-      # before any DRM/panel bring-up, which is the only way to read a boot
-      # log when the display path itself is what failed. Costs USB host mode.
+      # once systemd loads g_serial, and the serial getty autologins to root.
+      # panic=10 + oops=panic so a kernel panic is visible without any
+      # display: the tablet reboots itself ~10s after the panic, which reads
+      # as a boot loop instead of a black screen -- that distinguishes
+      # "panicked" from "hung alive but no picture". Costs USB host mode.
       sheng-serial = self.lib.shengSystem {
         inherit nixpkgs;
-        modules = [ { services.shengSerialConsole.enable = true; } ];
+        modules = [
+          {
+            services.shengSerialConsole.enable = true;
+            boot.kernelParams = [
+              "panic=10"
+              "oops=panic"
+            ];
+          }
+        ];
       };
 
       mkScripts =

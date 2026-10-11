@@ -28,7 +28,11 @@ let
     owner = "ianchb";
     repo = "sm8550-mainline";
     rev = "ad75da348a020f0b7cb541ca2f06ab38cf77004d"; # sheng-7.2.2
-    hash = "sha256-ZZcBh6At2H4mpjK+hJe3JrUvTsujYdJFq9j7dJhS1kM=";
+    # Verified against the live fetch: nix build of this fetchFromGitHub with
+    # the previous pin (sha256-ZZcBh6At…) fails "hash mismatch" on an empty
+    # store -- the value recorded in "update kernel" never matched. Assertions
+    # in postPatch re-verified against this content.
+    hash = "sha256-Lbnf90NdICvMKwmJRwT24XYp6EvZxgaRjb6pvNpKWdw=";
   };
 
   # Debug instrumentation for the U-Boot DSI work.

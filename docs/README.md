@@ -254,9 +254,14 @@ nix run .#flash-rootfs      # userdata from ./result/sheng-rootfs.sparse.img
 ## First boot
 
 > **Important — these are bring-up defaults, not safe ones.**
-> The image ships with **root autologin** on tty1 and both serial consoles, a **baked root
+> The image ships with **root autologin on tty1** and both serial consoles, a **baked root
 > password (`password`)**, and `networking.firewall.enable = false`. Change all three
 > before the device is on a network you do not control.
+
+The default image also logs straight into the **Niri + Noctalia** session — greetd's
+`initial_session` runs `niri --session` as root on tty1, so the greeter only shows on
+logout or lock. The desktop lives in `profiles/niri.nix`, wired into the flake's default
+`nixosConfigurations.sheng`; drop the module from `flake.nix` for the terminal-only image.
 
 Flashing `userdata` also wipes any Wi-Fi configuration and SSH keys, so a freshly flashed
 device is not reachable over the network. The way in is a **USB keyboard** — plug one into

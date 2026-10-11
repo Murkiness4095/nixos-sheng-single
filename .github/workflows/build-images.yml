@@ -30,11 +30,24 @@ jobs:
             max-jobs = auto
 
       # The kernel is source-patched (packages/kernel/default.nix) and in no
-      # binary cache, so every run without a cache compiles it. To skip that
-      # between runs, point this at a Cachix or Attic cache you control:
-      #   substituters = https://<your-cache> ...
-      # and push with cachix-action. /nix via actions/cache is impractical:
-      # the full store exceeds the 10 GB repo cache cap.
+      # binary cache, so every cold run compiles it. cache-nix-action stores
+      # the whole /nix store in the repo's GitHub Actions cache (private to
+      # this repo -- unlike public artifacts, this leaks nothing), keyed on
+      # every nix file plus flake.lock, with prefix restore so a kernel bump
+      # still reuses the previous closure. Cache capping knobs: the 10 GB repo
+      # limit is real (one full closure is most of it), so after each save the
+      # job purges every older cache but keeps the just-saved one.
+      - name: Restore nix store cache
+        uses: nix-community/cache-nix-action@v7
+        with:
+          primary-key: nix-store-${{ runner.os }}-${{ hashFiles('**/*.nix', '**/flake.lock', '**/*.patch') }}
+          restore-prefixes-first-match: nix-store-${{ runner.os }}-
+          gc-max-store-size-linux: 7G
+          purge: true
+          purge-prefixes: nix-store-${{ runner.os }}-
+          purge-created: 0
+          purge-primary-key: never
+
       - name: Build u-boot
         run: nix build .#u-boot --print-build-logs
 

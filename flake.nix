@@ -37,7 +37,13 @@
         config.allowUnfree = true;
       };
 
-      sheng = self.lib.shengSystem { inherit nixpkgs; };
+      # Default image carries the desktop profile (profiles/niri.nix); a
+      # terminal-only image is `shengSystem {}` with no extra modules --
+      # both flavors build from the same flake.
+      sheng = self.lib.shengSystem {
+        inherit nixpkgs;
+        modules = [ ./profiles/niri.nix ];
+      };
 
       mkScripts =
         hostPkgs:

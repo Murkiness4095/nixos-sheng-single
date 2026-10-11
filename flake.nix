@@ -49,6 +49,15 @@
       # kernel/U-Boot closures with `sheng`, so CI pays for one kernel build.
       sheng-tty = self.lib.shengSystem { inherit nixpkgs; };
 
+      # Diagnostic flavor: tty base plus the USB serial gadget console
+      # (console=ttyGS0 alongside tty0). Kernel messages reach the USB port
+      # before any DRM/panel bring-up, which is the only way to read a boot
+      # log when the display path itself is what failed. Costs USB host mode.
+      sheng-serial = self.lib.shengSystem {
+        inherit nixpkgs;
+        modules = [ { services.shengSerialConsole.enable = true; } ];
+      };
+
       mkScripts =
         hostPkgs:
         let
@@ -137,6 +146,7 @@
 
       nixosConfigurations.sheng = sheng;
       nixosConfigurations.sheng-tty = sheng-tty;
+      nixosConfigurations.sheng-serial = sheng-serial;
 
       packages = forHosts (
         hostPkgs:
@@ -149,6 +159,11 @@
 
             # Terminal-only image; same boot.img (U-Boot) serves both.
             nixos-tty = sheng-tty.config.system.build.shengImage;
+
+            # USB serial gadget console image -- for reading kernel logs when
+            # the display pipeline is the failure. Built by the workflow only
+            # with the diagnostic input ticked.
+            nixos-serial = sheng-serial.config.system.build.shengImage;
 
             u-boot = pkgs.callPackage ./packages/u-boot {
               src = u-boot-src;

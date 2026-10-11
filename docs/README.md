@@ -209,8 +209,23 @@ holds one `boot.img` plus both rootfs flavors:
 `boot.img` (U-Boot) is byte-identical for both flavors — flash it with either. Both
 rootfs images share the kernel and U-Boot closures, so building both costs one kernel
 compile plus one image pass. Locally the same split exists as `nix build .#nixos` and
-`.#nixos-tty`. Artifacts on this public repo are downloadable by anyone; keep `upload`
-off unless the repo is private.
+`.#nixos-tty`.
+
+Ticking the **diagnostic** input adds `sheng-rootfs-serial.sparse.img`
+(`nixosConfigurations.sheng-serial` = tty base + `services.shengSerialConsole`, so the
+kernel cmdline carries `console=ttyGS0`). Kernel messages then reach the USB-C port
+**before any DRM/panel bring-up**, which is the only way to read a boot log when the
+display path itself failed:
+
+```sh
+rm -f /tmp/nixos-socket
+nix shell nixpkgs#tio -c tio -m INLCRNL -S unix:/tmp/nixos-socket /dev/cu.usbmodem101 &   # Linux: /dev/ttyACM0
+nix run .#exec -- 'dmesg | tail -100'
+```
+
+It costs USB host mode (no hubs/keyboards/DP alt mode) — flash it only to diagnose,
+then go back to a normal image. Artifacts on this public repo are downloadable by
+anyone; keep `upload` off unless the repo is private.
 
 Without upload, the images exist only on the runner and in the Actions cache.
 

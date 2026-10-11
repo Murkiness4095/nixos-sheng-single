@@ -16,6 +16,10 @@ on:
         description: "Upload images as artifacts (redistribution-sensitive; repo is public)"
         type: boolean
         default: false
+      diagnostic:
+        description: "Also build the serial-console image (sheng-rootfs-serial.sparse.img) for kernel-log capture"
+        type: boolean
+        default: false
 
 jobs:
   build:
@@ -62,12 +66,21 @@ jobs:
       - name: Build rootfs image (tty)
         run: nix build .#nixos-tty -o result-rootfs-tty --print-build-logs
 
+      # tty base + console=ttyGS0: kernel logs reach the USB port before DRM,
+      # which is the whole point when the display pipeline is the failure.
+      - name: Build rootfs image (serial diagnose)
+        if: ${{ inputs.diagnostic }}
+        run: nix build .#nixos-serial -o result-rootfs-serial --print-build-logs
+
       - name: Collect images
         run: |
           mkdir -p out
           cp -L result-boot/boot.img out/
           cp -L result-rootfs-desktop/sheng-rootfs.sparse.img out/sheng-rootfs-desktop.sparse.img
           cp -L result-rootfs-tty/sheng-rootfs.sparse.img out/sheng-rootfs-tty.sparse.img
+          if [ "${{ inputs.diagnostic }}" = "true" ]; then
+            cp -L result-rootfs-serial/sheng-rootfs.sparse.img out/sheng-rootfs-serial.sparse.img
+          fi
           ls -la out/
 
       - name: Upload images

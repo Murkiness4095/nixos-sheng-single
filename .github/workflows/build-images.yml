@@ -1,0 +1,57 @@
+# Builds the flashable images (boot.img + sheng-rootfs.sparse.img) on a
+# native aarch64 runner. x86 runners would need QEMU, where a full SM8550
+# kernel compile runs for many hours -- that is what this avoids.
+#
+# Two inputs, both manual: this repo publishes no releases, and the images
+# contain proprietary Xiaomi/Qualcomm firmware with no redistribution grant
+# (docs/README.md licensing warning). The repo is public, so workflow
+# artifacts on a public repo are downloadable by anyone: keep upload=false
+# unless the repo is private.
+name: build-images
+
+on:
+  workflow_dispatch:
+    inputs:
+      upload:
+        description: "Upload images as artifacts (redistribution-sensitive; repo is public)"
+        type: boolean
+        default: false
+
+jobs:
+  build:
+    runs-on: ubuntu-24.04-arm
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: cachix/install-nix-action@v31
+        with:
+          extra_nix_config: |
+            experimental-features = nix-command flakes
+            max-jobs = auto
+
+      # The kernel is source-patched (packages/kernel/default.nix) and in no
+      # binary cache, so every run without a cache compiles it. To skip that
+      # between runs, point this at a Cachix or Attic cache you control:
+      #   substituters = https://<your-cache> ...
+      # and push with cachix-action. /nix via actions/cache is impractical:
+      # the full store exceeds the 10 GB repo cache cap.
+      - name: Build u-boot
+        run: nix build .#u-boot --print-build-logs
+
+      - name: Build rootfs image
+        run: nix build .#nixos --print-build-logs
+
+      - name: Collect images
+        run: |
+          mkdir -p out
+          cp -L result/boot.img out/
+          cp -L result/sheng-rootfs.sparse.img out/
+          ls -la out/
+
+      - name: Upload images
+        if: ${{ inputs.upload }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: sheng-images
+          path: out/
+          retention-days: 7

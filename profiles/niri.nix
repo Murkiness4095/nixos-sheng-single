@@ -69,11 +69,16 @@ in
   # -- greeter ---------------------------------------------------------------
   services.displayManager.noctalia-greeter = {
     enable = true;
-    # On-screen keyboard at the greeter is UNVERIFIED ON THIS DEVICE -- the
-    # greeter is Quickshell-based; check a keyboard appears on the password
-    # field, otherwise log in via a USB keyboard on tty1 (root autologin is
-    # on, so the greeter only shows on logout/lock anyway).
-    settings = { };
+
+    settings = {
+      cursor.size = 24;
+      keyboard.layout = "us";
+    };
+
+    cursorTheme = {
+      package = pkgs.bibata-cursors;
+      name = "Bibata-Modern-Ice";
+    };
   };
 
   # Tablet: no physical keyboard by default, so the session auto-logs-in.

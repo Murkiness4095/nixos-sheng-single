@@ -45,6 +45,10 @@
         modules = [ ./profiles/niri.nix ];
       };
 
+      # Terminal-only variant: same platform modules, no desktop. Shares the
+      # kernel/U-Boot closures with `sheng`, so CI pays for one kernel build.
+      sheng-tty = self.lib.shengSystem { inherit nixpkgs; };
+
       mkScripts =
         hostPkgs:
         let
@@ -132,6 +136,7 @@
       overlays.default = import ./overlay.nix;
 
       nixosConfigurations.sheng = sheng;
+      nixosConfigurations.sheng-tty = sheng-tty;
 
       packages = forHosts (
         hostPkgs:
@@ -141,6 +146,9 @@
             default = sheng.config.system.build.shengImage;
 
             nixos = sheng.config.system.build.shengImage;
+
+            # Terminal-only image; same boot.img (U-Boot) serves both.
+            nixos-tty = sheng-tty.config.system.build.shengImage;
 
             u-boot = pkgs.callPackage ./packages/u-boot {
               src = u-boot-src;

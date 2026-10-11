@@ -199,8 +199,18 @@ Push to `main` (or trigger from the Actions tab), then run **build-images** with
 `upload` input ticked. The runner is a native `ubuntu-24.04-arm`, so the images build
 without QEMU; the whole `/nix` store is cached in the repo's Actions cache after every
 run, so steady-state runs only rebuild what changed. The artifact (`sheng-images.zip`)
-holds `boot.img` and `sheng-rootfs.sparse.img`, ready to flash. Artifacts on this
-public repo are downloadable by anyone; keep `upload` off unless the repo is private.
+holds one `boot.img` plus both rootfs flavors:
+
+| File | Flavor |
+|---|---|
+| `sheng-rootfs-desktop.sparse.img` | Niri + Noctalia (`nixosConfigurations.sheng`) |
+| `sheng-rootfs-tty.sparse.img` | terminal only (`nixosConfigurations.sheng-tty`) |
+
+`boot.img` (U-Boot) is byte-identical for both flavors — flash it with either. Both
+rootfs images share the kernel and U-Boot closures, so building both costs one kernel
+compile plus one image pass. Locally the same split exists as `nix build .#nixos` and
+`.#nixos-tty`. Artifacts on this public repo are downloadable by anyone; keep `upload`
+off unless the repo is private.
 
 Without upload, the images exist only on the runner and in the Actions cache.
 

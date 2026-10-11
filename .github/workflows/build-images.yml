@@ -51,17 +51,23 @@ jobs:
       # Separate out-links: a plain `nix build .#u-boot` then `nix build .#nixos`
       # leaves a single `result` pointing at whichever built last -- the second
       # build silently replaces the first's symlink and boot.img disappears.
+      # boot.img is identical for both image flavors (U-Boot only), so build it
+      # once and flash it with either rootfs.
       - name: Build u-boot
         run: nix build .#u-boot -o result-boot --print-build-logs
 
-      - name: Build rootfs image
-        run: nix build .#nixos -o result-rootfs --print-build-logs
+      - name: Build rootfs image (desktop)
+        run: nix build .#nixos -o result-rootfs-desktop --print-build-logs
+
+      - name: Build rootfs image (tty)
+        run: nix build .#nixos-tty -o result-rootfs-tty --print-build-logs
 
       - name: Collect images
         run: |
           mkdir -p out
           cp -L result-boot/boot.img out/
-          cp -L result-rootfs/sheng-rootfs.sparse.img out/
+          cp -L result-rootfs-desktop/sheng-rootfs.sparse.img out/sheng-rootfs-desktop.sparse.img
+          cp -L result-rootfs-tty/sheng-rootfs.sparse.img out/sheng-rootfs-tty.sparse.img
           ls -la out/
 
       - name: Upload images

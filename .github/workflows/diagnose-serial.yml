@@ -1,0 +1,68 @@
+# Diagnostic build: USB serial console image ONLY. Exists for one job --
+# reading kernel logs when the display pipeline itself is the failure.
+#
+# Separate from build-images so there is never a "which file do I flash"
+# question: this workflow's artifact holds exactly two files, boot.img and
+# sheng-rootfs-serial.sparse.img. Always uploads on purpose -- it is a
+# manual, debugging-only artifact; the redistribution caveat for the
+# proprietary firmware inside is the same one documented in docs/README.md.
+name: diagnose-serial
+
+on:
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: ubuntu-24.04-arm
+    permissions:
+      contents: read
+      actions: write
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: cachix/install-nix-action@v31
+        with:
+          extra_nix_config: |
+            experimental-features = nix-command flakes
+            max-jobs = auto
+
+      - name: Restore nix store cache
+        uses: nix-community/cache-nix-action/restore@v7
+        id: nix-store-cache
+        with:
+          primary-key: nix-store-${{ runner.os }}-${{ hashFiles('**/*.nix', '**/flake.lock', '**/*.patch') }}
+          restore-prefixes-first-match: nix-store-${{ runner.os }}-
+
+      - name: Build u-boot
+        run: nix build .#u-boot -o result-boot --print-build-logs
+
+      # tty base + console=ttyGS0: kernel messages reach the USB-C port once
+      # systemd loads g_serial, and the serial getty autologins to root, so
+      # the tio window IS the device. Costs USB host mode -- diagnostic only.
+      - name: Build serial diagnose image
+        run: nix build .#nixos-serial -o result-rootfs-serial --print-build-logs
+
+      - name: Collect images
+        run: |
+          mkdir -p out
+          cp -L result-boot/boot.img out/
+          cp -L result-rootfs-serial/sheng-rootfs.sparse.img out/sheng-rootfs-serial.sparse.img
+          ls -la out/
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: sheng-serial-diagnostic
+          path: out/
+          retention-days: 7
+
+      - name: Save nix store cache
+        if: always()
+        uses: nix-community/cache-nix-action/save@v7
+        with:
+          primary-key: ${{ steps.nix-store-cache.outputs.primary-key }}
+          gc-max-store-size-linux: 7G
+          purge: true
+          purge-prefixes: nix-store-${{ runner.os }}-
+          purge-created: 0
+          purge-primary-key: never

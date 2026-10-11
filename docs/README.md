@@ -209,23 +209,32 @@ holds one `boot.img` plus both rootfs flavors:
 `boot.img` (U-Boot) is byte-identical for both flavors — flash it with either. Both
 rootfs images share the kernel and U-Boot closures, so building both costs one kernel
 compile plus one image pass. Locally the same split exists as `nix build .#nixos` and
-`.#nixos-tty`.
+`.#nixos-tty`. Artifacts on this public repo are downloadable by anyone; keep `upload`
+off unless the repo is private.
 
-Ticking the **diagnostic** input adds `sheng-rootfs-serial.sparse.img`
-(`nixosConfigurations.sheng-serial` = tty base + `services.shengSerialConsole`, so the
-kernel cmdline carries `console=ttyGS0`). Kernel messages then reach the USB-C port
-**before any DRM/panel bring-up**, which is the only way to read a boot log when the
-display path itself failed:
+A third flavor lives in its own workflow so there is never a "which file do I flash"
+question: run **diagnose-serial** and its artifact holds exactly `boot.img` plus
+`sheng-rootfs-serial.sparse.img` — the tty base with `services.shengSerialConsole`
+enabled, so the kernel cmdline carries `console=ttyGS0`. Kernel messages reach the
+USB-C port once systemd loads `g_serial`, and the serial getty autologins to root, so
+the `tio` window *is* the device:
 
 ```sh
-rm -f /tmp/nixos-socket
-nix shell nixpkgs#tio -c tio -m INLCRNL -S unix:/tmp/nixos-socket /dev/cu.usbmodem101 &   # Linux: /dev/ttyACM0
-nix run .#exec -- 'dmesg | tail -100'
+# 1. flash ONLY the rootfs (boot_ab keeps the U-Boot already on it):
+fastboot erase userdata
+fastboot flash userdata sheng-rootfs-serial.sparse.img
+# 2. attach the serial port FIRST (nothing to see yet -- expected):
+nix shell nixpkgs#tio -c tio -m INLCRNL /dev/cu.usbmodem101     # Linux: /dev/ttyACM0
+# 3. then reboot into it:
+fastboot reboot
+# 4. tio window: kernel log, then a root shell; run dmesg / sheng-mdss-status there
 ```
 
-It costs USB host mode (no hubs/keyboards/DP alt mode) — flash it only to diagnose,
-then go back to a normal image. Artifacts on this public repo are downloadable by
-anyone; keep `upload` off unless the repo is private.
+No initramfs here, so `g_serial` is a module loaded by systemd: the port only appears
+once the rootfs mounts and userspace starts. An empty window means the kernel died
+before that (rootfs mount or a built-in driver) — itself a conclusion. It costs USB
+host mode (no hubs/keyboards/DP alt mode), so it is diagnostic-only; flash a normal
+image afterwards.
 
 Without upload, the images exist only on the runner and in the Actions cache.
 

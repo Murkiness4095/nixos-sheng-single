@@ -48,17 +48,20 @@ jobs:
           primary-key: nix-store-${{ runner.os }}-${{ hashFiles('**/*.nix', '**/flake.lock', '**/*.patch') }}
           restore-prefixes-first-match: nix-store-${{ runner.os }}-
 
+      # Separate out-links: a plain `nix build .#u-boot` then `nix build .#nixos`
+      # leaves a single `result` pointing at whichever built last -- the second
+      # build silently replaces the first's symlink and boot.img disappears.
       - name: Build u-boot
-        run: nix build .#u-boot --print-build-logs
+        run: nix build .#u-boot -o result-boot --print-build-logs
 
       - name: Build rootfs image
-        run: nix build .#nixos --print-build-logs
+        run: nix build .#nixos -o result-rootfs --print-build-logs
 
       - name: Collect images
         run: |
           mkdir -p out
-          cp -L result/boot.img out/
-          cp -L result/sheng-rootfs.sparse.img out/
+          cp -L result-boot/boot.img out/
+          cp -L result-rootfs/sheng-rootfs.sparse.img out/
           ls -la out/
 
       - name: Upload images

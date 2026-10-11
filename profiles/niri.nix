@@ -200,7 +200,6 @@ in
     # tools
     yazi
     btop
-    fastfetch
     git
     vim
     wget

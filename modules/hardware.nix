@@ -54,6 +54,7 @@
     htop
     git
     busybox
+    fastfetch
   ];
   services.openssh.enable = true;
   networking.networkmanager.enable = true;

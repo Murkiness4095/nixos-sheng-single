@@ -193,6 +193,18 @@ iterate on it without pushing:
 nix build .#u-boot --override-input u-boot-src ../u-boot
 ```
 
+### With GitHub Actions
+
+Push to `main` (or trigger from the Actions tab), then run **build-images** with the
+`upload` input ticked. The runner is a native `ubuntu-24.04-arm`, so the images build
+without QEMU; the whole `/nix` store is cached in the repo's Actions cache after every
+run, so steady-state runs only rebuild what changed. The artifact
+(`sheng-images.zip`) holds `boot.img` plus `sheng-rootfs.sparse.img.zst` — decompress
+the latter with `zstd -d` before flashing. Artifacts on this public repo are
+downloadable by anyone; keep `upload` off unless the repo is private.
+
+Without upload, the images exist only on the runner and in the Actions cache.
+
 ---
 
 ## Flashing

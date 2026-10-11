@@ -62,6 +62,12 @@ jobs:
           mkdir -p out
           cp -L result-boot/boot.img out/
           cp -L result-rootfs/sheng-rootfs.sparse.img out/
+          # The sparse image carries the whole system closure (kernel, desktop,
+          # vendor userspace) and is the one artifact that can push the upload
+          # over a storage quota -- zstd it (runner has zstd) and ship that.
+          # Flashing takes the .zst back out: zstd -d.
+          zstd -T0 -3 -f out/sheng-rootfs.sparse.img -o out/sheng-rootfs.sparse.img.zst
+          rm out/sheng-rootfs.sparse.img
           ls -la out/
 
       - name: Upload images

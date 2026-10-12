@@ -171,9 +171,13 @@ let
   ourConfigFragment = builtins.toFile "sheng-extra.config" ''
     CONFIG_USB_CONFIGFS_ACM=y
     CONFIG_USB_CONFIGFS_SERIAL=y
-    # =m, not =y: built in it auto-binds the UDC at boot, pinning the Type-C
-    # port in peripheral mode for the life of the system.
-    CONFIG_USB_G_SERIAL=m
+    # =y, not =m, on this branch: a module is loaded by systemd's modules-load,
+    # so the console would not exist until userspace is up -- and whether
+    # userspace is up is the very question being asked. Built in, the gadget
+    # binds during kernel init, as soon as a UDC exists.
+    # (main keeps =m: built in it auto-binds the UDC at boot, pinning the
+    # Type-C port in peripheral mode for the life of the system.)
+    CONFIG_USB_G_SERIAL=y
     CONFIG_GPIO_SHARED_PROXY=y
     # Without this the ps5169 retimer never binds, the DP controller defers
     # forever, and msm_drm -- all components or none -- never completes.
@@ -231,6 +235,7 @@ let
       # kernel then builds exactly as before -- a silent revert costs nothing
       # to build but wastes a flash and a 40-minute CI run. Fail loudly instead.
       test "$(grep -c '^CONFIG_DRM_MSM=m$' .config)" = 1
+      test "$(grep -c '^CONFIG_USB_G_SERIAL=y$' .config)" = 1
 
       cp .config "$out"
 

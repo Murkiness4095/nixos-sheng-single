@@ -107,6 +107,30 @@
           {
             services.shengSerialConsole.enable = true;
             boot.blacklistedKernelModules = [ "msm" ];
+
+            # The USB role is not fixed on this board: sm8550.dtsi's usb@a600000
+            # carries `usb-role-switch`, and the sheng DTS points its hs endpoint
+            # at pmic_glink_hs_in. Until that firmware path reports "device" the
+            # UDC is never bound, so g_serial has nothing to attach to and the
+            # host sees no ttyACM at all -- which is exactly what happened.
+            # Forcing peripheral removes the dependency on ADSP/pmic-glink, which
+            # matters because whether this system is even alive is the question.
+            hardware.deviceTree.overlays = [
+              {
+                name = "force-peripheral-usb";
+                filter = "sm8550-xiaomi-sheng.dtb";
+                dtsText = ''
+                  /dts-v1/;
+                  /plugin/;
+                  / {
+                    compatible = "xiaomi,sheng", "qcom,sm8550";
+                  };
+                  &{/soc@0/usb@a600000} {
+                    dr_mode = "peripheral";
+                  };
+                '';
+              }
+            ];
             boot.consoleLogLevel = 7;
             boot.kernelParams = [
               "panic=10"

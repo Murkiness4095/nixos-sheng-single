@@ -57,16 +57,34 @@
       # as a boot loop instead of a black screen -- that distinguishes
       # "panicked" from "hung alive but no picture". Costs USB host mode.
       #
-      # fbcon=nodefer + consoleLogLevel=7 for the other half of the black
-      # screen. This kernel is built with
-      # CONFIG_FRAMEBUFFER_CONSOLE_DEFERRED_TAKEOVER=y (sm8550.config:5197), so
-      # fbcon does not bind when msm registers the fbdev: it binds at the first
-      # text written to the console and dumps the whole log_buf_len=8M backlog
-      # in one burst. That is the measured "flash of kernel log, then black,
-      # too fast to photograph" -- loglevel=4 hides the ongoing output after
-      # the burst. nodefer binds fbcon at registration instead, so the text
-      # appears progressively and the last line before the failure stays on
-      # the panel. consoleblank=0 rules out the console blanking timer.
+      # The USB channel is a bonus, not the plan: g_serial is a module, so the
+      # port only exists once systemd has mounted the rootfs and run
+      # modules-load. A kernel that dies earlier produces an empty window and
+      # says nothing. The panel is the channel that is known to work -- the
+      # measured failure shows kernel text on it -- so these parameters make
+      # the panel carry the whole story by itself:
+      #
+      #   fbcon=nodefer      this kernel sets CONFIG_FRAMEBUFFER_CONSOLE_
+      #                      DEFERRED_TAKEOVER=y (sm8550.config:5197), so fbcon
+      #                      binds at the first write to the console rather
+      #                      than when msm registers the fbdev, and dumps the
+      #                      log_buf_len=8M backlog in one unrepeatable burst.
+      #                      nodefer binds it at registration: text starts
+      #                      appearing with msm's probe and stays.
+      #   ignore_loglevel    print every kernel message, not just <= KERN_WARNING
+      #                      (hardware.nix pins consoleLogLevel at 4).
+      #   initcall_debug     one line per initcall, so the boot becomes a
+      #                      continuous scroll and the last line on the panel
+      #                      names the initcall that died (kernel-parameters.txt:
+      #                      "Useful for working out where the kernel is dying
+      #                      during startup").
+      #   keep_bootcon       do not unregister the boot console at handover --
+      #                      aimed squarely at "the console vanished".
+      #   consoleblank=0     rule out the console blanking timer.
+      #   systemd.log_*      route userspace logs to the same panel console, so
+      #                      a service that takes the display down (vconsole
+      #                      setup, backlight restore, a vendor daemon) is
+      #                      visible instead of silent.
       sheng-serial = self.lib.shengSystem {
         inherit nixpkgs;
         modules = [
@@ -77,7 +95,13 @@
               "panic=10"
               "oops=panic"
               "fbcon=nodefer"
+              "ignore_loglevel"
+              "initcall_debug"
+              "keep_bootcon"
               "consoleblank=0"
+              "systemd.log_level=debug"
+              "systemd.log_target=console"
+              "systemd.show_status=true"
             ];
           }
         ];

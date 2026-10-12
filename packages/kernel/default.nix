@@ -27,12 +27,16 @@ let
   rawSrc = fetchFromGitHub {
     owner = "ianchb";
     repo = "sm8550-mainline";
-    rev = "ad75da348a020f0b7cb541ca2f06ab38cf77004d"; # sheng-7.2.2
-    # Verified against the live fetch: nix build of this fetchFromGitHub with
-    # the previous pin (sha256-ZZcBh6At…) fails "hash mismatch" on an empty
-    # store -- the value recorded in "update kernel" never matched. Assertions
-    # in postPatch re-verified against this content.
-    hash = "sha256-Lbnf90NdICvMKwmJRwT24XYp6EvZxgaRjb6pvNpKWdw=";
+    # Rolled back from the sheng-7.2.2 pin (ad75da3). That branch is parked in
+    # a 300 Hz DP test configuration: its DTS assigns DISP_CC_MDSS_MDP_CLK
+    # 700 MHz at mdss_mdp probe ("Keep the DPU performance ceiling high enough
+    # for the 300 Hz DP test mode") and dispcc-sm8550.c adds the fractional
+    # 2.5-divider entry that makes 700 MHz reachable -- above the 514 MHz MDP
+    # OPP maximum. sheng-7.2.6 still carries both, so upgrading does not
+    # revert it. e87ae95 (sheng-7.2.0-kbd) is the last pin this repo has built
+    # and booted on hardware.
+    rev = "e87ae95664efe1c616f13be63f051e86ad9b762e"; # sheng-7.2.0-kbd
+    hash = "sha256-EuJiqO7MpGO+Voi6/1euBXyS8/2FzGLibhvDFmeSzeM=";
   };
 
   # Debug instrumentation for the U-Boot DSI work.
@@ -145,11 +149,11 @@ let
     installPhase = "cp -r . $out";
   };
 
-  version = "7.2.2-sheng";
+  version = "7.2.0-sheng";
 
   baseConfig = fetchurl {
-    url = "https://raw.githubusercontent.com/ianchb/debian-sheng/1e2a85fb6d89acb8989c416c729696403744c7a7/sm8550.config";
-    hash = "sha256-4hPYqTPCriFY1D/xo9Eot0UD1QgWNkNQOOhccE1EJW0=";
+    url = "https://raw.githubusercontent.com/ianchb/debian-sheng/940232a99ef3d5b7c3e7308a0ca367a809dcc799/sm8550.config";
+    hash = "sha256-XEBixKV1QLAxQRtlK6cgKVXm3uarahL+dnr5MiurdI4=";
   };
 
   ourConfigFragment = builtins.toFile "sheng-extra.config" ''
@@ -229,13 +233,13 @@ linuxManualConfig (
       ;
 
     # sm8550.config sets CONFIG_LOCALVERSION="-sm8550", so kernelrelease is
-    # 7.2.2-sm8550, not 7.2.2-sheng.
-    modDirVersion = "7.2.2-sm8550";
+    # 7.2.0-sm8550, not 7.2.0-sheng.
+    modDirVersion = "7.2.0-sm8550";
 
     allowImportFromDerivation = true;
 
     extraMeta = {
-      branch = "sheng-7.2.2";
+      branch = "sheng-7.2.0";
       description = "Mainline kernel for the Xiaomi Pad 6S Pro (sheng, SM8550P)";
     };
   }

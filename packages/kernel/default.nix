@@ -169,6 +169,13 @@ let
     # Temporary: strict-devmem blocks the MDSS SMMU page-table walks.
     # CONFIG_STRICT_DEVMEM is not set
     # CONFIG_IO_STRICT_DEVMEM is not set
+    # debian-sheng's sm8550.config turns deferred takeover on. Mirror the
+    # working Mobile NixOS port instead (nixos-sheng config.aarch64:5111 is
+    # "# CONFIG_FRAMEBUFFER_CONSOLE_DEFERRED_TAKEOVER is not set"): with it on,
+    # fbcon does not bind when msm registers the fbdev, it binds at the first
+    # write to the console and dumps the whole log_buf_len=8M backlog in one
+    # burst -- the measured "flash of kernel log, then instant black".
+    # CONFIG_FRAMEBUFFER_CONSOLE_DEFERRED_TAKEOVER is not set
   '';
 
   configfile = stdenv.mkDerivation {

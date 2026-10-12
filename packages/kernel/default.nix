@@ -27,16 +27,28 @@ let
   rawSrc = fetchFromGitHub {
     owner = "ianchb";
     repo = "sm8550-mainline";
-    # Rolled back from the sheng-7.2.2 pin (ad75da3). That branch is parked in
-    # a 300 Hz DP test configuration: its DTS assigns DISP_CC_MDSS_MDP_CLK
-    # 700 MHz at mdss_mdp probe ("Keep the DPU performance ceiling high enough
-    # for the 300 Hz DP test mode") and dispcc-sm8550.c adds the fractional
-    # 2.5-divider entry that makes 700 MHz reachable -- above the 514 MHz MDP
-    # OPP maximum. sheng-7.2.6 still carries both, so upgrading does not
-    # revert it. e87ae95 (sheng-7.2.0-kbd) is the last pin this repo has built
-    # and booted on hardware.
-    rev = "e87ae95664efe1c616f13be63f051e86ad9b762e"; # sheng-7.2.0-kbd
-    hash = "sha256-EuJiqO7MpGO+Voi6/1euBXyS8/2FzGLibhvDFmeSzeM=";
+    # sheng-7.2.6, taken over both of the pins that preceded it:
+    #
+    # - ad75da3 (sheng-7.2.2) is rejected twice over. The hash "update kernel"
+    #   recorded never matched the live fetch (recorded sha256-ZZcBh6At... vs
+    #   actual sha256-Lbnf90Nd...), so that pin was never built by anyone; and it
+    #   parks sheng in a 300 Hz DP test configuration -- its DTS assigns
+    #   DISP_CC_MDSS_MDP_CLK 700 MHz at mdss_mdp probe and dispcc-sm8550.c grows
+    #   the fractional 2.5-divider entry that makes 700 MHz reachable, above the
+    #   514 MHz MDP OPP maximum. 7.2.6 still carries both of those unchanged.
+    # - 7.2.6 does change the internal-panel path, where 7.2.2 did not:
+    #   dsi_calc_clk_rate_6g() now round-trips byte_clk through clk_round_rate()
+    #   and writes the rounded rate back into msm_host->byte_clk_rate. Everything
+    #   else in the panel chain is byte-identical to 7.2.2 (DTS, dispcc,
+    #   dsi_manager, panel-novatek-nt36532e, dpu_crtc, dpu_hw_intf,
+    #   dpu_encoder_phys_vid, ktz8866), and dpu_encoder.c's other change is the
+    #   DP YUV420 check only.
+    #
+    # The postPatch instrumentation below was run against this revision before
+    # pinning it: rc=0, all twelve grep -c assertions match. Its fixed-output
+    # hash and the debian-sheng config hash were both taken from a live fetch.
+    rev = "42f3b40c702abbc37c3a04c95af008cd283aeaf3"; # sheng-7.2.6
+    hash = "sha256-cll0sZv3fheM9PeleaK8lmdJQhj/rumMsVDwQ0842gM=";
   };
 
   # Debug instrumentation for the U-Boot DSI work.
@@ -149,11 +161,11 @@ let
     installPhase = "cp -r . $out";
   };
 
-  version = "7.2.0-sheng";
+  version = "7.2.6-sheng";
 
   baseConfig = fetchurl {
-    url = "https://raw.githubusercontent.com/ianchb/debian-sheng/940232a99ef3d5b7c3e7308a0ca367a809dcc799/sm8550.config";
-    hash = "sha256-XEBixKV1QLAxQRtlK6cgKVXm3uarahL+dnr5MiurdI4=";
+    url = "https://raw.githubusercontent.com/ianchb/debian-sheng/60753c1fb711f79ff44aa683917c171f28784ca7/sm8550.config";
+    hash = "sha256-cBPIYg8xz1yNKiPcaKcXtI5mZpd2s/h+CsCmyFfNJ18=";
   };
 
   ourConfigFragment = builtins.toFile "sheng-extra.config" ''
@@ -240,13 +252,13 @@ linuxManualConfig (
       ;
 
     # sm8550.config sets CONFIG_LOCALVERSION="-sm8550", so kernelrelease is
-    # 7.2.0-sm8550, not 7.2.0-sheng.
-    modDirVersion = "7.2.0-sm8550";
+    # 7.2.6-sm8550, not 7.2.6-sheng.
+    modDirVersion = "7.2.6-sm8550";
 
     allowImportFromDerivation = true;
 
     extraMeta = {
-      branch = "sheng-7.2.0";
+      branch = "sheng-7.2.6";
       description = "Mainline kernel for the Xiaomi Pad 6S Pro (sheng, SM8550P)";
     };
   }

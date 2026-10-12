@@ -56,14 +56,28 @@
       # display: the tablet reboots itself ~10s after the panic, which reads
       # as a boot loop instead of a black screen -- that distinguishes
       # "panicked" from "hung alive but no picture". Costs USB host mode.
+      #
+      # fbcon=nodefer + consoleLogLevel=7 for the other half of the black
+      # screen. This kernel is built with
+      # CONFIG_FRAMEBUFFER_CONSOLE_DEFERRED_TAKEOVER=y (sm8550.config:5197), so
+      # fbcon does not bind when msm registers the fbdev: it binds at the first
+      # text written to the console and dumps the whole log_buf_len=8M backlog
+      # in one burst. That is the measured "flash of kernel log, then black,
+      # too fast to photograph" -- loglevel=4 hides the ongoing output after
+      # the burst. nodefer binds fbcon at registration instead, so the text
+      # appears progressively and the last line before the failure stays on
+      # the panel. consoleblank=0 rules out the console blanking timer.
       sheng-serial = self.lib.shengSystem {
         inherit nixpkgs;
         modules = [
           {
             services.shengSerialConsole.enable = true;
+            boot.consoleLogLevel = 7;
             boot.kernelParams = [
               "panic=10"
               "oops=panic"
+              "fbcon=nodefer"
+              "consoleblank=0"
             ];
           }
         ];

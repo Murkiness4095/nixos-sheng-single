@@ -85,6 +85,17 @@
       #                      a service that takes the display down (vconsole
       #                      setup, backlight restore, a vendor daemon) is
       #                      visible instead of silent.
+      #
+      #   panic_console_replay  on panic, replay every kernel message on the
+      #                      consoles -- kernel/panic.c's core_param, no config
+      #                      gate. The measured failure is "a flash of log and
+      #                      then black": this makes the panic case leave the
+      #                      whole ring buffer on the panel for the 10s until
+      #                      panic= reboots, instead of one unrepeatable frame.
+      #   panic_sys_info=all_bt,tasks
+      #                      dump all CPU backtraces and the task list with it
+      #                      (__setup("panic_sys_info=") in the same file). The
+      #                      backtrace names the function that died.
       sheng-serial = self.lib.shengSystem {
         inherit nixpkgs;
         modules = [
@@ -94,6 +105,8 @@
             boot.kernelParams = [
               "panic=10"
               "oops=panic"
+              "panic_console_replay"
+              "panic_sys_info=all_bt,tasks"
               "fbcon=nodefer"
               "ignore_loglevel"
               "initcall_debug"

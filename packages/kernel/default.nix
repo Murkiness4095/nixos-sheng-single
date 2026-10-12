@@ -188,6 +188,13 @@ let
     # write to the console and dumps the whole log_buf_len=8M backlog in one
     # burst -- the measured "flash of kernel log, then instant black".
     # CONFIG_FRAMEBUFFER_CONSOLE_DEFERRED_TAKEOVER is not set
+    # Build the display stack as a module (it is tristate in
+    # drivers/gpu/drm/msm/Kconfig) so nothing touches MDSS/DSI/DPU during boot
+    # and the boot-time machineries cannot take the display down before there
+    # is any way to read a log. The system then reaches userspace with the
+    # panel dark, the USB serial gadget up, and `modprobe msm` reproduces the
+    # panel bring-up with a live console to capture it on.
+    CONFIG_DRM_MSM=m
   '';
 
   configfile = stdenv.mkDerivation {
@@ -219,6 +226,11 @@ let
 
       ./scripts/kconfig/merge_config.sh -O . -m .config ${ourConfigFragment}
       make olddefconfig
+
+      # A symbol kconfig cannot satisfy is dropped by olddefconfig, and the
+      # kernel then builds exactly as before -- a silent revert costs nothing
+      # to build but wastes a flash and a 40-minute CI run. Fail loudly instead.
+      test "$(grep -c '^CONFIG_DRM_MSM=m$' .config)" = 1
 
       cp .config "$out"
 

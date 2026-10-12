@@ -96,11 +96,17 @@
       #                      dump all CPU backtraces and the task list with it
       #                      (__setup("panic_sys_info=") in the same file). The
       #                      backtrace names the function that died.
+      #
+      # msm is blacklisted rather than merely built as a module: udev coldplug
+      # autoloads a matching platform modalias, so a module alone would still
+      # probe the display during boot, before the USB console exists. `blacklist`
+      # only blocks autoloading; `modprobe msm` over the serial shell still works.
       sheng-serial = self.lib.shengSystem {
         inherit nixpkgs;
         modules = [
           {
             services.shengSerialConsole.enable = true;
+            boot.blacklistedKernelModules = [ "msm" ];
             boot.consoleLogLevel = 7;
             boot.kernelParams = [
               "panic=10"
